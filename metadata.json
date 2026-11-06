@@ -1,0 +1,6 @@
+{
+  "name": "JUTON - Sustainable Luxury Jute Bags Wholesale",
+  "description": "Frontend foundation for JUTON: Sustainable by Nature. Designed for Business. Premium B2B jute bag wholesale e-commerce platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

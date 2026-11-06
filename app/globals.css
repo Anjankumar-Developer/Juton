@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-warm-ivory: #F7F5EF;
+  --color-natural-beige: #E8DDCA;
+  --color-jute-brown: #A88B66;
+  --color-olive-green: #68745A;
+  --color-deep-olive: #3D4935;
+  --color-charcoal: #252720;
+  --color-white: #FFFFFF;
+
+  --font-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+:root {
+  --background: #F7F5EF;
+  --foreground: #252720;
+  --color-warm-ivory: #F7F5EF;
+  --color-natural-beige: #E8DDCA;
+  --color-jute-brown: #A88B66;
+  --color-olive-green: #68745A;
+  --color-deep-olive: #3D4935;
+  --color-charcoal: #252720;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #F7F5EF;
+  color: #252720;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Luxury Editorial Typography utilities */
+.font-editorial-heading {
+  font-family: var(--font-serif);
+  letter-spacing: -0.015em;
+}
+
+.font-editorial-body {
+  font-family: var(--font-sans);
+  letter-spacing: 0.01em;
+}
+
+/* Subtle Jute Texture Effect (CSS-only woven mesh hint) */
+.jute-subtle-pattern {
+  background-image: radial-gradient(#A88B66 0.6px, transparent 0.6px);
+  background-size: 16px 16px;
+  background-color: #F7F5EF;
+}
+
+/* Selection */
+::selection {
+  background-color: #A88B66;
+  color: #FFFFFF;
+}
