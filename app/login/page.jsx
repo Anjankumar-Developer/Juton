@@ -42,9 +42,10 @@ export default function LoginPage() {
     }, 800);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSuccessMessage(null);
 
     const validation = validateLogin(formData);
     if (!validation.valid) {
@@ -53,11 +54,12 @@ export default function LoginPage() {
       return;
     }
 
-    const result = login(formData);
+    const result = await login(formData);
     if (result.success) {
+      const redirectPath = result.user?.role === 'admin' ? '/admin' : '/account';
       setSuccessMessage('Sign in successful. Redirecting to your trade portal...');
       setTimeout(() => {
-        router.push('/account');
+        router.push(redirectPath);
       }, 800);
     } else if (result.errors) {
       setErrors(result.errors);

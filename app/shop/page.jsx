@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo, Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,20 +20,61 @@ import {
 import Container from '@/components/ui/Container';
 import ProductCard from '@/components/ui/ProductCard';
 import Button from '@/components/ui/Button';
-import { products, CATEGORIES, DEMO_PRICING_DISCLAIMER } from '@/data/products';
+import { products as fallbackProducts, CATEGORIES as fallbackCategories, DEMO_PRICING_DISCLAIMER } from '@/data/products';
+import { fetchCatalogProducts, fetchCatalogCategories } from '@/lib/catalog';
+
+const staticCategories = fallbackCategories;
+const staticProducts = fallbackProducts;
 
 function ShopContent() {
   const searchParams = useSearchParams();
   const initialCategoryParam = searchParams.get('category');
+  const [products, setProducts] = useState(staticProducts);
+  const [categories, setCategories] = useState(staticCategories);
+  const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCatalog() {
+      setIsLoadingCatalog(true);
+
+      try {
+        const [{ products: catalogProducts }, catalogCategories] = await Promise.all([
+          fetchCatalogProducts(),
+          fetchCatalogCategories(),
+        ]);
+
+        if (!isMounted) return;
+
+        setProducts(catalogProducts || staticProducts);
+        setCategories(catalogCategories || staticCategories);
+      } catch (error) {
+        console.warn('Failed to load catalog data:', error);
+        if (isMounted) {
+          setProducts(staticProducts);
+          setCategories(staticCategories);
+        }
+      } finally {
+        if (isMounted) setIsLoadingCatalog(false);
+      }
+    }
+
+    loadCatalog();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Match initial category if provided via query string
   const initialCategory = useMemo(() => {
     if (!initialCategoryParam) return 'All Categories';
-    const found = CATEGORIES.find(
-      (cat) => cat.toLowerCase() === initialCategoryParam.toLowerCase()
+    const found = categories.find(
+      (cat) => cat.name?.toLowerCase?.() === initialCategoryParam.toLowerCase() || cat.toLowerCase?.() === initialCategoryParam.toLowerCase()
     );
-    return found || 'All Categories';
-  }, [initialCategoryParam]);
+    return found ? (typeof found === 'string' ? found : found.name) : 'All Categories';
+  }, [initialCategoryParam, categories]);
 
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [searchQuery, setSearchQuery] = useState('');
@@ -110,7 +151,7 @@ function ShopContent() {
     }
 
     return list;
-  }, [selectedCategory, searchQuery, sortBy, availability, onlyBestSellers, onlyNew]);
+  }, [products, selectedCategory, searchQuery, sortBy, availability, onlyBestSellers, onlyNew]);
 
   const hasActiveFilters =
     selectedCategory !== 'All Categories' ||
@@ -255,20 +296,21 @@ function ShopContent() {
                   <Filter className="w-3 h-3 text-[#A88B66]" />
                   Category:
                 </span>
-                {CATEGORIES.map((category) => {
-                  const isActive = selectedCategory === category;
+                {categories.map((category) => {
+                  const label = typeof category === 'string' ? category : category.name || category.label || 'Category';
+                  const isActive = selectedCategory === label;
                   return (
                     <button
-                      key={category}
+                      key={label}
                       type="button"
-                      onClick={() => setSelectedCategory(category)}
+                      onClick={() => setSelectedCategory(label)}
                       className={`px-3.5 py-1.5 text-xs font-sans transition-all cursor-pointer border ${
                         isActive
                           ? 'bg-[#3D4935] text-[#FFFFFF] border-[#3D4935] font-semibold shadow-xs'
                           : 'bg-[#FFFFFF] text-[#252720]/80 border-[#E8DDCA] hover:border-[#A88B66] hover:text-[#252720]'
                       }`}
                     >
-                      {category}
+                      {label}
                     </button>
                   );
                 })}
@@ -323,7 +365,21 @@ function ShopContent() {
 
           {/* Product Grid (Responsive: 1 col mobile, 2 col tablet, 3 col desktop) */}
           <div className="mt-8">
-            {filteredProducts.length === 0 ? (
+            {isLoadingCatalog ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="animate-pulse bg-white border border-[#E8DDCA] overflow-hidden">
+                    <div className="h-64 bg-[#E8DDCA]/60" />
+                    <div className="p-5 space-y-3">
+                      <div className="h-4 w-20 bg-[#E8DDCA]/80" />
+                      <div className="h-6 w-3/4 bg-[#E8DDCA]/80" />
+                      <div className="h-4 w-full bg-[#E8DDCA]/80" />
+                      <div className="h-4 w-2/3 bg-[#E8DDCA]/80" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredProducts.length === 0 ? (
               <div className="bg-[#FFFFFF] border border-[#E8DDCA] p-12 text-center space-y-4 max-w-lg mx-auto my-12">
                 <div className="w-12 h-12 bg-[#E8DDCA]/40 rounded-full flex items-center justify-center mx-auto text-[#68745A]">
                   <Search className="w-6 h-6" />

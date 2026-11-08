@@ -123,6 +123,10 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = (e) => {
     e.preventDefault();
+    if (isSubmitting || confirmedOrder) {
+      return;
+    }
+
     setIsSubmitting(true);
     const newErrors = {};
 
@@ -174,6 +178,7 @@ export default function CheckoutPage() {
         name: i.name,
         color: i.selectedColor,
         quantity: i.quantity,
+        stockQuantity: i.stockQuantity ?? i.inventory?.available_quantity ?? i.inventory?.availableQuantity ?? 0,
         price: i.financials?.unitPrice || i.priceINR,
         lineTotal: i.financials?.lineSubtotal || 0,
       })),
@@ -190,8 +195,17 @@ export default function CheckoutPage() {
       currency: activeCurrency,
     };
 
-    // Save to demo orders history & clear cart
     const placed = addDemoOrder(orderPayload);
+    if (!placed || placed.success === false) {
+      setErrors((prev) => ({
+        ...prev,
+        form: placed?.error || 'This order could not be processed because stock was no longer available.',
+      }));
+      setIsSubmitting(false);
+      window.scrollTo({ top: 120, behavior: 'smooth' });
+      return;
+    }
+
     clearCart();
     setConfirmedOrder(placed);
     setIsSubmitting(false);

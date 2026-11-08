@@ -51,9 +51,10 @@ export default function RegisterPage() {
     setErrors({});
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSuccessMessage(null);
 
     const validation = validateRegistration(formData);
     if (!validation.valid) {
@@ -62,8 +63,14 @@ export default function RegisterPage() {
       return;
     }
 
-    const result = register(formData);
+    const result = await register(formData);
     if (result.success) {
+      if (result.requiresEmailVerification) {
+        setSuccessMessage(result.message || 'Registration successful. Please verify your email before signing in.');
+        setIsSubmitting(false);
+        return;
+      }
+
       setSuccessMessage('Registration successful! Redirecting to your trade account...');
       setTimeout(() => {
         router.push('/account');

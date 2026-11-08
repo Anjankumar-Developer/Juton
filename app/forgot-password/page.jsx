@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ShieldCheck, Mail, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import Container from '@/components/ui/Container';
 import Button from '@/components/ui/Button';
 import { validateForgotPassword } from '@/lib/auth';
+import { supabaseBrowser } from '@/lib/supabase/client';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -13,7 +14,7 @@ export default function ForgotPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
@@ -25,11 +26,26 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    // Simulate password reset token dispatch
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setIsSubmitted(true);
-    }, 600);
+    if (!supabaseBrowser) {
+      setTimeout(() => {
+        setIsSubmitting(false);
+        setIsSubmitted(true);
+      }, 600);
+      return;
+    }
+
+    const { error: resetError } = await supabaseBrowser.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined,
+    });
+
+    setIsSubmitting(false);
+
+    if (resetError) {
+      setError(resetError.message || 'Unable to send a password reset link right now.');
+      return;
+    }
+
+    setIsSubmitted(true);
   };
 
   return (

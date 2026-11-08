@@ -7,11 +7,13 @@ import {
   calculateCartTotals,
   serializeCartForSupabase,
 } from '@/lib/cart';
+import { useAuth } from '@/context/AuthContext';
 import { getProductById } from '@/data/products';
 
 const CartContext = createContext(null);
 
 export function CartProvider({ children, activeCurrency = 'INR' }) {
+  const { user: authUser } = useAuth();
   const [items, setItems] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -82,16 +84,69 @@ export function CartProvider({ children, activeCurrency = 'INR' }) {
     return () => clearTimeout(timer);
   }, []);
 
-  // 2. Persist to LocalStorage on every cart change
   useEffect(() => {
-    if (!isLoaded || typeof window === 'undefined') return;
+    if (!authUser) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function hydrateServerCart() {
+      try {
+        const response = await fetch('/api/cart', { method: 'GET' });
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = await response.json();
+        if (!isMounted || !Array.isArray(payload.items)) {
+          return;
+        }
+
+        setItems(payload.items.map((item) => ({
+          ...item,
+          itemKey: item.itemKey || `${item.productId || item.id}-${item.selectedColor || 'Natural Jute'}`,
+          quantity: Number(item.quantity || 0),
+        })));
+      } catch (error) {
+        console.warn('Failed to restore authenticated cart from Supabase:', error);
+      }
+    }
+
+    hydrateServerCart();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authUser]);
+
+  useEffect(() => {
+    if (!isLoaded || typeof window === 'undefined' || authUser) return;
 
     try {
       window.localStorage.setItem(LOCAL_STORAGE_CART_KEY, JSON.stringify(items));
     } catch (err) {
       console.warn('Failed to persist wholesale cart to localStorage:', err);
     }
-  }, [items, isLoaded]);
+  }, [items, isLoaded, authUser]);
+
+  useEffect(() => {
+    if (!isLoaded || !authUser || typeof window === 'undefined') return;
+
+    const payload = items.map((item) => ({
+      productId: item.productId || item.id,
+      selectedColor: item.selectedColor || (item.colors && item.colors[0]?.name) || 'Natural Jute',
+      quantity: Number(item.quantity || 0),
+    }));
+
+    fetch('/api/cart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'sync', items: payload }),
+    }).catch((error) => {
+      console.warn('Failed to sync cart with Supabase:', error);
+    });
+  }, [items, isLoaded, authUser]);
 
   // 3. Centralized Financial Calculations (Central source of truth)
   const totals = useMemo(() => {
